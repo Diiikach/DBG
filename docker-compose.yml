@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:14.8-alpine3.18
+    environment:
+      POSTGRES_DB: "DGV_BD"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "users_pswd"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - ./db_init:/docker-entrypoint-initdb.d
+      - dgvdb-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d DGV_BD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+
+volumes:
+  dgvdb-data:
