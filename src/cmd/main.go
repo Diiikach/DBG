@@ -1,15 +1,13 @@
-package cmd
 package main
 
+import (
+	"github.com/gin-gonic/gin"
+)
 
-
-
-
-
-
-
-
-
-
-
-}	r.Run()	})		c.JSON(200, gin.H{"status": "ok"})	r.GET("/health", func(c *gin.Context) {	r := gin.Default()func main() {)	"github.com/gin-gonic/gin"import (
+func main() {
+	r := gin.Default()
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+	r.Run()
+}
