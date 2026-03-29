@@ -1,4 +1,9 @@
-CREATE TYPE sex_enum AS ENUM ('male', 'female', 'other');
+DO $$
+BEGIN
+    CREATE TYPE sex_enum AS ENUM ('male', 'female', 'other');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS patient (
     patient_id SERIAL PRIMARY KEY,

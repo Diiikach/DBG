@@ -1,14 +1,11 @@
--- 011_create_views.sql
--- Создание представлений для проекта
-
--- Представление: Варианты с полной аннотацией
+-- View: variants with full annotation
 CREATE OR REPLACE VIEW v_variant_full AS
-SELECT 
+SELECT
     v.variant_id,
     v.chromosome,
     v.position,
-    v.ref_allele,
-    v.alt_allele,
+    v.reference_allele,
+    v.alternate_allele,
     v.rs_id,
     v.variant_type,
     v.genome_build,
@@ -27,16 +24,16 @@ FROM variant v
 LEFT JOIN variant_annotation va ON v.variant_id = va.variant_id
 LEFT JOIN gene g ON va.gene_id = g.gene_id;
 
--- Представление: Пациенты с их вариантами
+-- View: patients with their variants
 CREATE OR REPLACE VIEW v_patient_variants AS
-SELECT 
+SELECT
     p.patient_id,
     p.external_id,
     v.variant_id,
     v.chromosome,
     v.position,
-    v.ref_allele,
-    v.alt_allele,
+    v.reference_allele,
+    v.alternate_allele,
     v.rs_id,
     pv.zygosity,
     pv.quality,
@@ -50,17 +47,17 @@ JOIN variant v ON pv.variant_id = v.variant_id
 LEFT JOIN variant_annotation va ON v.variant_id = va.variant_id
 LEFT JOIN gene g ON va.gene_id = g.gene_id;
 
--- Представление: Статистика вариантов
+-- View: variant statistics
 CREATE OR REPLACE VIEW v_variant_statistics AS
-SELECT 
+SELECT
     v.variant_id,
     v.chromosome,
     v.position,
-    v.ref_allele,
-    v.alt_allele,
+    v.reference_allele,
+    v.alternate_allele,
     v.rs_id,
-    COUNT(pv.patient_id) as patient_count,
-    GROUP_CONCAT(DISTINCT p.external_id) as patient_ids
+    COUNT(pv.patient_id) AS patient_count,
+    string_agg(DISTINCT p.external_id, ',') AS patient_ids
 FROM variant v
 LEFT JOIN patient_variant pv ON v.variant_id = pv.variant_id
 LEFT JOIN patient p ON pv.patient_id = p.patient_id

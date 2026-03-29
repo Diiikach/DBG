@@ -1,7 +1,30 @@
-CREATE TYPE impact_type AS ENUM('HIGH','MODERATE','LOW','MODIFIER');
-CREATE TYPE sift_prediction_type AS ENUM('tolerated','deleterious');
-CREATE TYPE polyphen_prediction_type AS ENUM('benign','possibly_damaging','probably_damaging');
-CREATE TYPE clinvar_significance_type AS ENUM('benign','likely_benign','uncertain_significance','likely_pathogenic','pathogenic','conflicting','not_provided');
+DO $$
+BEGIN
+    CREATE TYPE impact_type AS ENUM('HIGH','MODERATE','LOW','MODIFIER');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE sift_prediction_type AS ENUM('tolerated','deleterious');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE polyphen_prediction_type AS ENUM('benign','possibly_damaging','probably_damaging');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE clinvar_significance_type AS ENUM('benign','likely_benign','uncertain_significance','likely_pathogenic','pathogenic','conflicting','not_provided');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS variant_annotation (
 	annotation_id BIGSERIAL PRIMARY KEY,
@@ -27,3 +50,5 @@ CREATE TABLE IF NOT EXISTS variant_annotation (
 	clinvar_id VARCHAR(20),
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_variant_annotation_variant_id ON variant_annotation (variant_id);

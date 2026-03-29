@@ -1,4 +1,9 @@
-CREATE TYPE direction AS ENUM('+','-');
+DO $$
+BEGIN
+    CREATE TYPE direction AS ENUM('+','-');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS gene (
     gene_id SERIAL PRIMARY KEY,
@@ -13,5 +18,4 @@ CREATE TABLE IF NOT EXISTS gene (
     strand direction,
     gene_description TEXT
 );
-
 
