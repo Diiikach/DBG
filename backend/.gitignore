@@ -1,0 +1,7 @@
+bin/
+data/work/
+data/uploads/
+data/reference/*.fa
+data/reference/*.fa.*
+*.log
+.env

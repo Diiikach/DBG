@@ -1,0 +1,26 @@
+# Database dumps
+dump.sql
+*.sql.gz
+
+# Large genomic reference files
+gen_reference/ncbi_dataset/ncbi_dataset/data/**/*.fna
+gen_reference/ncbi_dataset/ncbi_dataset/data/**/*.fna.*
+
+# Environment files
+db.env
+.env
+*.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,102 @@
+services:
+  db:
+    # PostgreSQL 18 — дамп сделан в нём (используется параметр transaction_timeout,
+    # которого нет в 16/17). При смене версии вниз — потребуется регенерация дампа.
+    image: postgres:18
+    container_name: variant_db
+    restart: unless-stopped
+    # Значения берутся из локального ./db.env (PGDATABASE/PGUSER/PGPASSWORD).
+    # Дополнительно мапим их в стандартные POSTGRES_* переменные, которые
+    # понимает официальный образ postgres.
+    env_file:
+      - ./db.env
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-variant_db}
+      POSTGRES_USER: ${PGUSER:-genadmin}
+      # PGPORT в db.env = 5433 (для psql с хоста через проброс). Внутри
+      # контейнера postgres всё равно должен слушать 5432, иначе и api,
+      # и healthcheck постучатся не туда.
+      PGPORT: "5432"
+      # В db.env пароль закомментирован (peer/trust локально). В контейнере
+      # пароль обязателен, поэтому задаём дефолт; при желании переопределить —
+      # добавьте PGPASSWORD=... в db.env или в окружение compose.
+      POSTGRES_PASSWORD: ${PGPASSWORD:-genadmin}
+    # Единственный экземпляр БД для проекта. На хост проброшен порт 5433
+    # (см. db.env / DB_ACCESS.md). Внутри docker-сети сервис доступен как db:5432.
+    ports:
+      - "5433:5432"
+    volumes:
+      # В postgres:18 том нужно монтировать на /var/lib/postgresql:
+      # данные оказываются в подпапке с именем мажорной версии (18/docker/).
+      - db_data:/var/lib/postgresql
+      # Автоматическая инициализация при первом запуске пустого тома.
+      # Порядок выполнения определяется именами файлов.
+      - ./docker/initdb/00-roles.sql:/docker-entrypoint-initdb.d/00-roles.sql:ro
+      - ./docker/initdb/05-user-table.sql:/docker-entrypoint-initdb.d/05-user-table.sql:ro
+      - ./dump.sql:/docker-entrypoint-initdb.d/10-dump.sql:ro
+      - ./docker/initdb/20-user-table.sql:/docker-entrypoint-initdb.d/20-user-table.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-genadmin} -d ${PGDATABASE:-variant_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      # На первом запуске postgres заливает ~7.8 GB dump.sql и не принимает
+      # внешних соединений до завершения. Даём щедрый старт-период.
+      start_period: 30m
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      network: host
+    container_name: variant_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./db.env
+    environment:
+      # Внутри docker-сети БД доступна по имени сервиса `db` на порту 5432
+      # (хостовый проброс 5433 здесь не нужен). Перебиваем libpq-переменные
+      # из db.env, иначе pgx подменит порт в DATABASE_URL значением PGPORT=5433.
+      PGHOST: db
+      PGPORT: "5432"
+      DATABASE_URL: postgresql://${PGUSER:-genadmin}:${PGPASSWORD:-genadmin}@db:5432/${PGDATABASE:-variant_db}?sslmode=disable
+      HTTP_ADDR: ":8080"
+      WORK_DIR: /app/data/work
+      UPLOADS_DIR: /app/data/uploads
+      REFERENCE_FA: /app/data/reference/ref.fa
+      GENOME_BUILD: GRCh38
+    # Внешний порт 8081, чтобы не конфликтовать с другим локальным процессом на 8080.
+    ports:
+      - "8081:8080"
+    volumes:
+      - api_work:/app/data/work
+      - api_uploads:/app/data/uploads
+      - api_reference:/app/data/reference
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      network: host
+      args:
+        # VITE_API_BASE_URL встраивается на этапе сборки. По умолчанию указываем
+        # на хостовый порт API (api сервис проброшен на 8081). Если фронт будет
+        # открываться не с localhost, переопределите через .env / окружение.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8081}
+    container_name: variant_web
+    restart: unless-stopped
+    depends_on:
+      - api
+    # nginx внутри слушает 80; наружу публикуем 8082 (5173 часто занят
+    # локальным vite / ssh-туннелем). Переопределить можно через WEB_PORT.
+    ports:
+      - "${WEB_PORT:-8082}:80"
+
+volumes:
+  db_data:
+  api_work:
+  api_uploads:
+  api_reference:
